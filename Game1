@@ -1,0 +1,539 @@
+---@diagnostic disable: undefined-global
+--[[
+    KINETIC UI
+
+    Author : Blissful#4492
+    Finish Date : 26/2/22
+    Documentation : https://blissful.gitbook.io/kinetic/
+    GitRepo : https://github.com/Blissful4992/Kinetic
+
+    VOP HUB
+
+    Author : Dadvop
+    Finish Date : 6/24/2022
+    Games : Hunter X Athena on this copy.
+
+]]
+-- Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
+
+-- Libraries
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/Kinetic"))()
+
+-- Connections
+--[[
+local PlayerJoinConnection
+local PlayerLeaveConnection
+local CharacterSpawnConnections = {}
+local CharacterDeathConnections = {}
+local CharacterTorsoConnections = {}
+]]
+
+-- Objects
+local LocalPlayer = Players.LocalPlayer
+
+-- Functions
+local function GetCharacter(Player)
+    if Workspace.Living:FindFirstChild(Player.Name) then
+        return Workspace.Living[Player.Name]
+    else
+        print(Player.Name)
+        return false
+    end
+end
+
+local function GetData(Player)
+    if Workspace.Data:FindFirstChild(Player.Name) then
+        return Workspace.Data[Player.Name]
+    else
+        return false
+    end
+end
+
+local function DistanceFromCharacter(Character)
+    local LocalCharacter = LocalPlayer.Character
+    return (LocalCharacter.PrimaryPart.Position - Character.PrimaryPart.Position).Magnitude
+end
+
+local function ClearConnectionsTable(Table)
+    for __, Value in next, Table do
+        Value:Disconnect()
+    end
+end
+
+--
+local Overrides = {
+    Background = Color3.fromRGB(23, 30, 51),
+    Section_Background = Color3.fromRGB(18, 23, 38),
+
+    Dark_Borders = Color3.fromRGB(18, 23, 38),
+    Light_Borders = Color3.fromRGB(255, 255, 255),
+
+    Text_Color = Color3.fromRGB(235, 235, 235),
+
+    Accent = Color3.fromRGB(255, 81, 0),
+    Dark_Accent = Color3.fromRGB(140, 45, 0),
+}
+
+local Window = Library.NewWindow({
+    Text = "Vop Hub",
+
+    WindowSize = Vector2.new(550, 450),     -- Initial Size of the Window
+    WindowPosition = Vector2.new(400, 200), -- Initial Position of the Window
+
+    ThemeOverrides = Overrides,
+    Scalable = false, -- Default : True
+
+    WindowSizeCallback = function(new)
+        --print("You changed the window size to: " .. new.X .. ", " .. new.Y)
+    end,
+
+    WindowPositionCallback = function(new)
+        --print("You moved the window to: " .. new.X .. ", " .. new.Y)
+    end,
+
+    CloseCallback = function()
+        --[[
+        PlayerJoinConnection:Disconnect()
+        PlayerLeaveConnection:Disconnect()
+        
+        ClearConnectionsTable(CharacterSpawnConnections)
+        ClearConnectionsTable(CharacterDeathConnections)
+        ClearConnectionsTable(CharacterTorsoConnections)
+        ]]--
+    end
+})
+
+-- HxA
+local C_Page = Window.NewPage({Text = "Hunter x Athena"})
+-- Auto Combat
+local C_Section = C_Page.NewSection({Text = "Auto Combat"})
+
+local Autoheavy = false
+local HeavyDistance = 3
+
+local Autoblock = false
+local DelayTimeInitial = 217
+local DelayTimePost = 285
+local BlockDistance = 10
+
+local Autopunch = false
+local PunchDistance = 5
+
+-- Auto Heavy
+local C_AutoHeavy = C_Section.NewToggle({
+    Text = "Auto Heavy",
+    Callback = function(bool)
+        Autoheavy = bool
+    end,
+    Default = false,
+    Description = "If someone close by is blocking, heavy attack the moment they do to break it",
+})
+local C_AutoHeavyDistance = C_Section.NewSlider({
+    Text = "Heavy Distance",
+    Callback = function(integer)
+        HeavyDistance = integer
+    end,
+    Default = HeavyDistance,
+    Min = 1,
+    Max = 25,
+    Decimals = 0,
+    Suffix = " studs",
+    Description = "How far away to heavy from",
+})
+
+-- Auto Punch
+local C_AutoPunch = C_Section.NewToggle({
+    Text = "Auto Punch",
+    Callback = function(bool)
+        Autopunch = bool
+    end,
+    Default = Autopunch,
+    Description = "If someone uses a heavy nearby to you, automatically punch the moment they do to cancel it",
+})
+local C_AutoPunchDistance = C_Section.NewSlider({
+    Text = "Punch Distance",
+    Callback = function(integer)
+        PunchDistance = integer
+    end,
+    Default = PunchDistance,
+    Min = 1,
+    Max = 25,
+    Decimals = 0,
+    Suffix = " studs",
+    Description = "How far away to punch from",
+})
+
+-- Auto Block
+local C_AutoBlock = C_Section.NewToggle({
+    Text = "Auto Block",
+    Callback = function(bool)
+        Autoblock = bool
+    end,
+    Default = Autoblock,
+    Description = "Make people fucking hate you",
+})
+local C_Initial_Delay = C_Section.NewSlider({
+    Text = "Initial Delay",
+    Callback = function(integer)
+        DelayTimeInitial = integer
+    end,
+    Default = DelayTimeInitial,
+    Min = 1,
+    Max = 1000,
+    Decimals = 0,
+    Suffix = " ms",
+    Description = "Delay in milliseconds after punch to block"
+})
+local C_Post_Delay = C_Section.NewSlider({
+    Text = "Post Delay",
+    Callback = function(integer)
+        DelayTimePost = integer
+    end,
+    Default = DelayTimePost,
+    Min = 1,
+    Max = 1000,
+    Decimals = 0,
+    Suffix = " ms",
+    Description = "Delay in milliseconds after punch to block"
+})
+local C_Block_Distance = C_Section.NewSlider({
+    Text = "Block Distance",
+    Callback = function(integer)
+        BlockDistance = integer
+    end,
+    Default = BlockDistance,
+    Min = 1,
+    Max = 25,
+    Decimals = 0,
+    Suffix = " studs",
+    Description = "How far away to block from",
+})
+-- Auto Farm
+local T_Section = C_Page.NewSection({Text = "Training"}) 
+local M_Section = C_Page.NewSection({Text = "Meditating"})
+local A_Section = C_Page.NewSection({Text = "Magic"})
+local AU_Section = C_Page.NewSection({Text = "Automatic Trainers"})
+
+local Workers = 1
+local Threads = 1
+local Med_Delay = 10
+
+local AutoTrain_Meditate = false
+local AutoTrain_Pushups = false
+
+local AutoTrain_True = false
+local PhysicalSelection = "FastSprint"
+local MagicKey = "N"
+
+local function Enable_Automeditate(Type)
+    if Type == "Meditate" then
+        if AutoTrain_Meditate then
+            task.spawn(function()
+                while AutoTrain_Meditate do
+                    local Character = GetCharacter(LocalPlayer)
+                    task.wait(Med_Delay)
+                    for __ = 1, Workers do
+                        task.spawn(function()
+                            for ___ = 1, Threads do
+                                Character.Character.input:FireServer("M", function() print("May your game rest in peace"); end)
+                            end
+                        end)
+                    end
+                end
+            end)
+        end
+    end
+end
+
+local function Enable_AutoTrain(Type)
+    if Type == "Pushup" then
+        if AutoTrain_Pushups then
+            task.spawn(function()
+                while AutoTrain_Pushups do
+                    if LocalPlayer.PlayerGui:FindFirstChild("PushupsGui") then
+                        LocalPlayer.PlayerGui.PushupsGui.Pushups.RemoteEvent:FireServer()
+                    end
+                    task.wait(0.1)
+                end
+            end)
+        end
+    end
+end
+
+local function StartAutoTrain()
+    if AutoTrain_True then
+        while AutoTrain_True do
+            local Character = GetCharacter(LocalPlayer)
+
+            if Character then
+                if Character.Humanoid.Info.Stamina.Value >= 99 then
+                    for _ = 1, 50 do
+                        Character.Character.input:FireServer(PhysicalSelection .. "Start", false)
+                    end
+                    Character.Character.input:FireServer(PhysicalSelection .. "End", false)
+                end
+                if Character.Humanoid.Info.NenStam.Value >= 99 then
+                    local End_Game = function()
+                        print("Your game is mine now")
+                    end
+
+                    for _ = 1, 50 do
+                        Character.Character.input:FireServer(MagicKey, End_Game)
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end
+end
+
+local A_AutoAura = A_Section.NewButton({
+    Text = "Drain energy for Aura",
+    Callback = function()
+        local Character = GetCharacter(LocalPlayer)
+        if Character then
+            for __= 1, 50 do
+                Character.Character.input:FireServer("N", function() print("May your game rest in peace"); end)
+            end
+        end
+    end,
+})
+
+local T_AutoPushups = T_Section.NewToggle({
+    Text = "Auto Pushups",
+    Callback = function(Boolean)
+        AutoTrain_Pushups = Boolean
+        Enable_AutoTrain("Pushup")
+    end,
+    Default = false,
+    Description = "Automatically Complete Pushups"
+})
+
+local T_SprintDrain = T_Section.NewButton({
+    Text = "Sprint Drain",
+    Callback = function()
+        local Character = GetCharacter(LocalPlayer)
+
+        if Character then
+            for _ = 1, 50 do
+                Character.Character.input:FireServer("FastSprintStart", false)
+            end
+            Character.Character.input:FireServer("FastSprintEnd", false)
+        end
+    end,
+    Description = "Drain sprint stamina to generate EXP"
+})
+
+local T_ClimbDrain = T_Section.NewButton({
+    Text = "Climb Drain",
+    Callback = function()
+        local Character = GetCharacter(LocalPlayer)
+        
+        if Character then
+            for _ = 1, 50 do
+                Character.Character.input:FireServer("ClimbStart")
+            end
+            Character.Character.input:FireServer("ClimbEnd")
+        end
+    end,
+    Description = "Drain climb stamina to generate EXP"
+})
+
+local M_AutoMeditate = M_Section.NewToggle({
+    Text = "Auto Meditate",
+    Callback = function(Boolean)
+        AutoTrain_Meditate = Boolean
+        Enable_Automeditate("Meditate")
+    end,
+    Default = false,
+    Description = "Be careful with workers/threads, may crash you.",
+})
+local M_AutoMeditate_Workers = M_Section.NewSlider({
+    Text = "Workers",
+    Callback = function(Integer)
+        Workers = Integer
+    end,
+    Min = 1,
+    Max = 64,
+    Decimals = 0,
+    Suffix = " workers",
+    Default = 1,
+    Description = "Be careful! This spawns [n] new threads to send requests!"
+})
+local M_AutoMeditate_Threads = M_Section.NewSlider({
+    Text = "Threads",
+    Callback = function(Integer)
+        Threads = Integer
+    end,
+    Min = 16,
+    Max = 1024,
+    Decimals = 0,
+    Suffix = " threads",
+    Default = 64,
+    Description = "Be careful! This sends [n] new requests!"
+})
+local M_AutoMeditate_Delay = M_Section.NewSlider({
+    Text = "Send Delay",
+    Callback = function(Integer)
+        Med_Delay = Integer
+    end,
+    Min = 1,
+    Max = 120,
+    Decimals = 0,
+    Default = 64,
+    Suffix = " seconds",
+    Description = "Be careful! This sends [n] new requests!"
+})
+-- Auto shit
+local AU_Toggle = AU_Section.NewToggle({
+    Text = "Enable Auto Farmer",
+    Callback = function(Bool)
+        AutoTrain_True = Bool
+        StartAutoTrain()
+    end,
+    Default = false,
+    Description = "Enable auto farming of selected options",
+})
+local AU_DropDownPhsyical = AU_Section.NewDropdown({
+    Text = "Physical Training", 
+    Callback = function(option)
+        PhysicalSelection = option
+    end, 
+    Options = {
+        "Sprint",
+        "Climb",
+    }, 
+    Default = 1, -- Index of the default option (e.g. "Green")
+    Description = "Select a physical stat to train"
+})
+local AU_DropDownPhsyical = AU_Section.NewDropdown({
+    Text = "Physical Training", 
+    Callback = function(option)
+        if option == "Ten" then
+            MagicKey = "B"
+        elseif option == "Ren" then
+            MagicKey = "V"
+        elseif option == "Zetsu" then
+            MagicKey = "C"
+        elseif option == "Ko" then
+            MagicKey = "X"
+        elseif option == "Gyo" then
+            MagicKey = "G"
+        elseif option == "In" then
+            MagicKey = "Z"
+        else
+            MagicKey = "N"
+        end
+    end, 
+    Options = {
+        "Aura",
+        "Ten",
+        "Ren",
+        "Zetsu",
+        "Ko",
+        "Gyo",
+        "In",
+    }, 
+    Default = 1, -- Index of the default option (e.g. "Green")
+    Description = "Select a physical stat to train"
+})
+
+-- Connections Major
+CollectionService:GetInstanceAddedSignal("Punching"):Connect(function(Object)
+    local Character = GetCharacter(Object)
+
+    if Character and Character.Name ~= LocalPlayer.Name then
+        if DistanceFromCharacter(Character) <= BlockDistance then
+            local LocalCharacter = GetCharacter(LocalPlayer)
+
+            task.wait(DelayTimeInitial/1000)
+            LocalCharacter.Character.input:FireServer("F", false)
+
+            task.wait(DelayTimePost/1000)
+            LocalCharacter.Character.input:FireServer("FEnd", false)
+        end
+    end
+end)
+CollectionService:GetInstanceAddedSignal("Blocking"):Connect(function(Object)
+    local Character = GetCharacter(Object)
+
+    if Character and Character.Name ~= LocalPlayer.Name then
+        if DistanceFromCharacter(Character) <= HeavyDistance and Autoheavy then
+            mouse2click()
+        end
+    end
+end)
+CollectionService:GetInstanceAddedSignal("Heavy"):Connect(function(Object)
+    local Character = GetCharacter(Object)
+
+    if Character and Character.Name ~= LocalPlayer.Name then
+        if DistanceFromCharacter(Character) <= PunchDistance and Autopunch then
+            mouse1click()
+        end
+    end
+end)
+--[[
+local function ListenToCurrentCharacter(Player) -- Works based off sound JIC they patch below
+    local Character = GetCharacter(Player)
+
+    if Character and Character:FindFirstChild("Torso") then
+        local CharacterConnection = Character.Torso.ChildAdded:Connect(function(Child)
+            if Child.Name == "Swing" and DistanceFromCharacter(Character) <= BlockDistance and Autoblock then
+                local LocalCharacter = GetCharacter(LocalPlayer)
+                print("Block attempt against ", Player.Name)
+                task.wait(DelayTimeInitial/1000)
+                LocalCharacter.Character.input:FireServer("F", false)
+
+                task.wait(DelayTimePost/1000)
+                LocalCharacter.Character.input:FireServer("FEnd", false)
+            end
+        end)
+        return CharacterConnection
+    else
+        return false
+    end
+
+end
+
+local function AddToCharacterSpawn(Player)
+    CharacterSpawnConnections[Player.UserId] = Player.CharacterAdded:Connect(function(__)
+        repeat task.wait(5) until GetCharacter(Player) ~= false
+        local Character = GetCharacter(Player)
+
+        if Character then
+            CharacterTorsoConnections[Player.UserId] = ListenToCurrentCharacter(Player)
+        end
+    end)
+end
+
+local function AddToCharacterDeath(Player)
+    CharacterDeathConnections[Player.UserId] = Player.CharacterRemoving:Connect(function()
+        if CharacterTorsoConnections[Player.UserId] then
+            CharacterTorsoConnections[Player.UserId]:Disconnect()
+        end
+    end)
+end
+
+for __, Player in pairs(Players:GetPlayers()) do
+    if Player == LocalPlayer then continue end
+    AddToCharacterSpawn(Player)
+    AddToCharacterDeath(Player)
+    CharacterTorsoConnections[Player.UserId] = ListenToCurrentCharacter(Player)
+end
+
+PlayerJoinConnection = Players.PlayerAdded:Connect(function(Player)
+    AddToCharacterSpawn(Player)
+    AddToCharacterDeath(Player)
+end)
+PlayerLeaveConnection = Players.PlayerRemoving:Connect(function(Player)
+    CharacterSpawnConnections[Player.UserId]:Disconnect()
+    CharacterDeathConnections[Player.UserId]:Disconnect()
+    if CharacterTorsoConnections[Player.UserId] then
+        CharacterTorsoConnections[Player.UserId]:Disconnect()
+    end
+end)
+]]
