@@ -1,4 +1,3 @@
----@diagnostic disable: undefined-global
 --[[
     KINETIC UI
 
@@ -10,8 +9,8 @@
     VOP HUB
 
     Author : Dadvop
-    Finish Date : 6/24/2022
-    Games : Hunter X Athena on this copy.
+    Finish Date : 6/23/2022
+    Games : Conflicted
 
 ]]
 -- Services
@@ -476,64 +475,26 @@ CollectionService:GetInstanceAddedSignal("Heavy"):Connect(function(Object)
         end
     end
 end)
---[[
-local function ListenToCurrentCharacter(Player) -- Works based off sound JIC they patch below
-    local Character = GetCharacter(Player)
 
-    if Character and Character:FindFirstChild("Torso") then
-        local CharacterConnection = Character.Torso.ChildAdded:Connect(function(Child)
-            if Child.Name == "Swing" and DistanceFromCharacter(Character) <= BlockDistance and Autoblock then
-                local LocalCharacter = GetCharacter(LocalPlayer)
-                print("Block attempt against ", Player.Name)
-                task.wait(DelayTimeInitial/1000)
-                LocalCharacter.Character.input:FireServer("F", false)
+Sent_Message = false
+local Prompt = Window.NewPrompt({
+    Name = "Terms of Service";
+    Text = "By clicking 'Yes' you admit to being gay as shit for cheating on Roblox.com",
 
-                task.wait(DelayTimePost/1000)
-                LocalCharacter.Character.input:FireServer("FEnd", false)
-            end
-        end)
-        return CharacterConnection
-    else
-        return false
-    end
+    Countdown = 10,
 
-end
+    Accept = function()
+        LocalPlayer:Kick("Too far gone")
+    end,
 
-local function AddToCharacterSpawn(Player)
-    CharacterSpawnConnections[Player.UserId] = Player.CharacterAdded:Connect(function(__)
-        repeat task.wait(5) until GetCharacter(Player) ~= false
-        local Character = GetCharacter(Player)
-
-        if Character then
-            CharacterTorsoConnections[Player.UserId] = ListenToCurrentCharacter(Player)
+    Reject = function()
+        if not Sent_Message then
+            Sent_Message = true
+            Window.NewNotification({
+                Title = "Afternoon",
+                Body = "Created by Dadvop [Fold#7337], DM with any questions / concerns.",
+                Time = 7,
+            })
         end
-    end)
-end
-
-local function AddToCharacterDeath(Player)
-    CharacterDeathConnections[Player.UserId] = Player.CharacterRemoving:Connect(function()
-        if CharacterTorsoConnections[Player.UserId] then
-            CharacterTorsoConnections[Player.UserId]:Disconnect()
-        end
-    end)
-end
-
-for __, Player in pairs(Players:GetPlayers()) do
-    if Player == LocalPlayer then continue end
-    AddToCharacterSpawn(Player)
-    AddToCharacterDeath(Player)
-    CharacterTorsoConnections[Player.UserId] = ListenToCurrentCharacter(Player)
-end
-
-PlayerJoinConnection = Players.PlayerAdded:Connect(function(Player)
-    AddToCharacterSpawn(Player)
-    AddToCharacterDeath(Player)
-end)
-PlayerLeaveConnection = Players.PlayerRemoving:Connect(function(Player)
-    CharacterSpawnConnections[Player.UserId]:Disconnect()
-    CharacterDeathConnections[Player.UserId]:Disconnect()
-    if CharacterTorsoConnections[Player.UserId] then
-        CharacterTorsoConnections[Player.UserId]:Disconnect()
-    end
-end)
-]]
+    end,
+})
