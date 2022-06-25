@@ -1,3 +1,4 @@
+---@diagnostic disable: undefined-global
 --[[
     KINETIC UI
 
@@ -227,6 +228,7 @@ local AutoTrain_Pushups = false
 local AutoTrain_True = false
 local PhysicalSelection = "FastSprint"
 local MagicKey = "N"
+local AutoCalls = 10
 
 local function Enable_Automeditate(Type)
     if Type == "Meditate" then
@@ -253,10 +255,18 @@ local function Enable_AutoTrain(Type)
         if AutoTrain_Pushups then
             task.spawn(function()
                 while AutoTrain_Pushups do
+                    local Character = GetCharacter(LocalPlayer)
+                    if Character and Character.Humanoid then
+                        if Character.Humanoid.Info.Stamina.Value <= 10 then
+                            Character.Character.input:FireServer("J", function() print("May your game rest in peace") end)
+                            repeat task.wait(1) until Character.Humanoid.Info.Stamina.Value >= 99
+                            Character.Character.input:FireServer("J", function() print("May your game rest in peace") end)
+                        end
+                    end
                     if LocalPlayer.PlayerGui:FindFirstChild("PushupsGui") then
                         LocalPlayer.PlayerGui.PushupsGui.Pushups.RemoteEvent:FireServer()
                     end
-                    task.wait(0.1)
+                    task.wait(0.3)
                 end
             end)
         end
@@ -270,17 +280,28 @@ local function StartAutoTrain()
 
             if Character then
                 if Character.Humanoid.Info.Stamina.Value >= 99 then
-                    for _ = 1, 50 do
-                        Character.Character.input:FireServer(PhysicalSelection .. "Start", false)
+                    if PhysicalSelection ~= "Both" then
+                        for _ = 1, AutoCalls do
+                            Character.Character.input:FireServer(PhysicalSelection .. "Start", false)
+                        end
+                        Character.Character.input:FireServer(PhysicalSelection .. "End", false)
+                    else
+                        for _ = 1, AutoCalls do
+                            Character.Character.input:FireServer("ClimbStart", false)
+                        end
+                        Character.Character.input:FireServer("ClimbEnd", false)
+                        for _ = 1, AutoCalls do
+                            Character.Character.input:FireServer("FastSprintStart", false)
+                        end
+                        Character.Character.input:FireServer("FastSprintEnd", false)
                     end
-                    Character.Character.input:FireServer(PhysicalSelection .. "End", false)
                 end
                 if Character.Humanoid.Info.NenStam.Value >= 99 then
                     local End_Game = function()
                         print("Your game is mine now")
                     end
 
-                    for _ = 1, 50 do
+                    for _ = 1, AutoCalls do
                         Character.Character.input:FireServer(MagicKey, End_Game)
                     end
                 end
@@ -405,12 +426,13 @@ local AU_DropDownPhsyical = AU_Section.NewDropdown({
     Options = {
         "Sprint",
         "Climb",
+        "Both",
     }, 
     Default = 1, -- Index of the default option (e.g. "Green")
     Description = "Select a physical stat to train"
 })
-local AU_DropDownPhsyical = AU_Section.NewDropdown({
-    Text = "Physical Training", 
+local AU_DropDownMagicList = AU_Section.NewDropdown({
+    Text = "Magic Training", 
     Callback = function(option)
         if option == "Ten" then
             MagicKey = "B"
@@ -440,12 +462,25 @@ local AU_DropDownPhsyical = AU_Section.NewDropdown({
     Default = 1, -- Index of the default option (e.g. "Green")
     Description = "Select a physical stat to train"
 })
+local AU_LoopControl = AU_Section.NewSlider({
+    Text = "Loop Call Amount",
+    Callback = function(Integer)
+        AutoCalls = Integer
+    end,
+    Default = 10,
+    Min = 1,
+    Max = 100,
+    Decimals = 0,
+    Suffix = " Calls",
+    Description = "Be careful, overdrafting on Magic can kill you."
+})
+
 
 -- Connections Major
 CollectionService:GetInstanceAddedSignal("Punching"):Connect(function(Object)
     local Character = GetCharacter(Object)
 
-    if Character and Character.Name ~= LocalPlayer.Name then
+    if Character and Character.Name ~= LocalPlayer.Name and Autoblock then
         if DistanceFromCharacter(Character) <= BlockDistance then
             local LocalCharacter = GetCharacter(LocalPlayer)
 
@@ -460,7 +495,7 @@ end)
 CollectionService:GetInstanceAddedSignal("Blocking"):Connect(function(Object)
     local Character = GetCharacter(Object)
 
-    if Character and Character.Name ~= LocalPlayer.Name then
+    if Character and Character.Name ~= LocalPlayer.Name and Autoheavy then
         if DistanceFromCharacter(Character) <= HeavyDistance and Autoheavy then
             mouse2click()
         end
@@ -469,7 +504,7 @@ end)
 CollectionService:GetInstanceAddedSignal("Heavy"):Connect(function(Object)
     local Character = GetCharacter(Object)
 
-    if Character and Character.Name ~= LocalPlayer.Name then
+    if Character and Character.Name ~= LocalPlayer.Name and Autopunch then
         if DistanceFromCharacter(Character) <= PunchDistance and Autopunch then
             mouse1click()
         end
