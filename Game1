@@ -1,4 +1,3 @@
----@diagnostic disable: undefined-global
 --[[
     KINETIC UI
 
@@ -9,7 +8,7 @@
 
     VOP HUB
 
-    Author : Dadvop
+    Author : Dadvop [Fold#7337]
     Finish Date : 6/23/2022
     Games : Conflicted
 
@@ -22,15 +21,6 @@ local CollectionService = game:GetService("CollectionService")
 
 -- Libraries
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/Kinetic"))()
-
--- Connections
---[[
-local PlayerJoinConnection
-local PlayerLeaveConnection
-local CharacterSpawnConnections = {}
-local CharacterDeathConnections = {}
-local CharacterTorsoConnections = {}
-]]
 
 -- Objects
 local LocalPlayer = Players.LocalPlayer
@@ -55,6 +45,7 @@ end
 
 local function DistanceFromCharacter(Character)
     local LocalCharacter = LocalPlayer.Character
+    if not LocalCharacter or not Character then return 9999 end
     return (LocalCharacter.PrimaryPart.Position - Character.PrimaryPart.Position).Magnitude
 end
 
@@ -96,14 +87,7 @@ local Window = Library.NewWindow({
     end,
 
     CloseCallback = function()
-        --[[
-        PlayerJoinConnection:Disconnect()
-        PlayerLeaveConnection:Disconnect()
-        
-        ClearConnectionsTable(CharacterSpawnConnections)
-        ClearConnectionsTable(CharacterDeathConnections)
-        ClearConnectionsTable(CharacterTorsoConnections)
-        ]]--
+    
     end
 })
 
@@ -217,6 +201,7 @@ local T_Section = C_Page.NewSection({Text = "Training"})
 local M_Section = C_Page.NewSection({Text = "Meditating"})
 local A_Section = C_Page.NewSection({Text = "Magic"})
 local AU_Section = C_Page.NewSection({Text = "Automatic Trainers"})
+local TI_Section = C_Page.NewSection({Text = "Titan Shift"})
 
 local Workers = 1
 local Threads = 1
@@ -255,18 +240,10 @@ local function Enable_AutoTrain(Type)
         if AutoTrain_Pushups then
             task.spawn(function()
                 while AutoTrain_Pushups do
-                    local Character = GetCharacter(LocalPlayer)
-                    if Character and Character.Humanoid then
-                        if Character.Humanoid.Info.Stamina.Value <= 10 then
-                            Character.Character.input:FireServer("J", function() print("May your game rest in peace") end)
-                            repeat task.wait(1) until Character.Humanoid.Info.Stamina.Value >= 99
-                            Character.Character.input:FireServer("J", function() print("May your game rest in peace") end)
-                        end
-                    end
                     if LocalPlayer.PlayerGui:FindFirstChild("PushupsGui") then
                         LocalPlayer.PlayerGui.PushupsGui.Pushups.RemoteEvent:FireServer()
                     end
-                    task.wait(0.3)
+                    task.wait(0.2)
                 end
             end)
         end
@@ -310,6 +287,28 @@ local function StartAutoTrain()
         end
     end
 end
+
+local Mindless = TI_Section.NewButton({
+    Text = "Mindless Titan Shift",
+    Callback = function()
+        ReplicatedStorage.TitanSpawners.Mindless:FireServer()
+    end,
+    Description = "Change into Mindless titan. Fucking horrible anticheat out here.."
+})
+local Crawler = TI_Section.NewButton({
+    Text = "Crawler Titan Shift",
+    Callback = function()
+        ReplicatedStorage.TitanSpawners.Crawler:FireServer()
+    end,
+    Description = "Change into Crawler titan. Fucking horrible anticheat out here.."
+})
+local Abnormal = TI_Section.NewButton({
+    Text = "Abnormal Titan Shift",
+    Callback = function()
+        ReplicatedStorage.TitanSpawners.Abnormal:FireServer()
+    end,
+    Description = "Change into Abnormal titan. Fucking horrible anticheat out here.."
+})
 
 local A_AutoAura = A_Section.NewButton({
     Text = "Drain energy for Aura",
@@ -428,7 +427,7 @@ local AU_DropDownPhsyical = AU_Section.NewDropdown({
         "Climb",
         "Both",
     }, 
-    Default = 1, -- Index of the default option (e.g. "Green")
+    Default = 1, 
     Description = "Select a physical stat to train"
 })
 local AU_DropDownMagicList = AU_Section.NewDropdown({
